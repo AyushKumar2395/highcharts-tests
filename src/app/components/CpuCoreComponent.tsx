@@ -37,7 +37,7 @@ const CpuCoreComponent: React.FC = () => {
             }));
         };
 
-        const generateCpuSeries = (processedData: ProcessedCpuData[]) => {
+        const generateCpuSeries = (processedData: ProcessedCpuData[]): (SeriesColumnOptions | SeriesLineOptions)[] => {
             const coreSeries: { [key: string]: SeriesColumnOptions } = {};
             const sqlServerCPU: SeriesLineOptions = {
                 name: 'Sql Server CPU',
@@ -49,7 +49,7 @@ const CpuCoreComponent: React.FC = () => {
 
             processedData.forEach((entry) => {
                 entry.Metric.PercentProcessorTimeCore.forEach((coreEntry) => {
-                    if (coreEntry.Core === "_total") return;  // Skip total
+                    if (coreEntry.Core === "_total") return;
                     if (!coreSeries[coreEntry.Core]) {
                         coreSeries[coreEntry.Core] = {
                             name: `Core ${coreEntry.Core}`,
@@ -62,13 +62,13 @@ const CpuCoreComponent: React.FC = () => {
                 });
                 sqlServerCPU.data!.push([new Date(entry.DateTime).getTime(), entry.Metric.SqlServerCPU]);
             });
-            return Object.values(coreSeries).concat(sqlServerCPU);
+
+            return [...Object.values(coreSeries), sqlServerCPU];
         };
-        debugger
+
         const processedData = processCpuData(data);
         const newSeries = generateCpuSeries(processedData);
-        if (!Array.isArray(newSeries)) return
-        setSeries([...newSeries]);
+        setSeries(newSeries);
     }, [data]);
 
     useEffect(() => {
@@ -76,7 +76,7 @@ const CpuCoreComponent: React.FC = () => {
 
         if (isLiveData) {
             interval = setInterval(() => {
-                var demodata = {
+                const demodata = {
                     "DateTime": new Date().toISOString(),
                     "WinServer": "CTS02",
                     "PercentProcessorTimeCore": JSON.stringify([
@@ -87,7 +87,7 @@ const CpuCoreComponent: React.FC = () => {
                         { "Core": "_total", "Value": Math.ceil(Math.random() * 200) }
                     ]),
                     "SqlServerCPU": Math.ceil(Math.random() * 50)
-                }
+                };
 
                 setData((prevData) => {
                     const newData = [...prevData, demodata];
@@ -109,21 +109,22 @@ const CpuCoreComponent: React.FC = () => {
             chart.series.forEach((s) => {
                 seriesMap[s.name] = s;
             });
-
+    
             series.forEach((s) => {
                 if (seriesMap[s.name!]) {
                     const seriesInstance = seriesMap[s.name!];
                     seriesInstance.update({
-                        data: s.data
+                        ...s
                     }, false);
                 } else {
                     chart.addSeries(s, false);
                 }
             });
-
+    
             chart.redraw();
         }
     }, [series]);
+    
 
     const handleDataChange = (newData: typeof T12hrdata | typeof T15DayData | typeof T1Daydata | typeof T1Monthdata | typeof T4Monthdata | typeof TLivedata) => {
         setData(newData);
